@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 
-class UserModel extends Model
+class UserModel extends Authenticatable
 {
+    use HasApiTokens;
+
     protected $table = 'tbl_user';
     protected $primaryKey = 'user_id';
     public $timestamps = false; // We aren't using default created_at/updated_at columns here
@@ -17,5 +20,10 @@ class UserModel extends Model
         'country_id',
         'role_id',
         'user_status'
+    ];
+
+    // Hide sensitive fields from API responses
+    protected $hidden = [
+        'password'
     ];
 }

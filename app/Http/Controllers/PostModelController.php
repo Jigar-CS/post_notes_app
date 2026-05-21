@@ -17,7 +17,7 @@ class PostModelController extends Controller {
             "title" => "required",
             "content" => "required",
             "category_name" => "required|string",
-            "is_public" => "nullable|integer|in:0,1",
+            "is_public" => "required|integer|in:0,1",
             "user_id" => "nullable|exists:tbl_user,user_id",
             "tags" => "nullable|array",
             "tags.*" => "nullable|string"
@@ -67,7 +67,7 @@ class PostModelController extends Controller {
             $post->category_id = $categoryId;
             $post->title = $request->input('title');
             $post->content = $request->input('content');
-            $post->is_public = $request->input('is_public', 1);
+            $post->is_public = $request->input('is_public');
             $post->post_status = 1;
             if ($request->hasFile('featured_image')) {
                 $imgName = time().'_'.$request->file('featured_image')->getClientOriginalName();
@@ -93,6 +93,13 @@ class PostModelController extends Controller {
         }
     }
     public function fetchAllPosts(Request $request) {
+        // Check authorization FIRST (before any input validation)
+        $auth = AuthMiddleware::authenticate($request);
+        if (!$auth) { 
+            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
+        }
+
+        // Then validate input parameters
         $valid = Validator::make($request->all(), [
             'offset' => 'required|integer',
             'limit' => 'required|integer'
@@ -105,10 +112,11 @@ class PostModelController extends Controller {
             $data["limit"] = $request->input("limit");
             if ($request->has('search') && $request->input('search') != "") { $data['search'] = $request->input('search'); }
             try {
-                $auth = AuthMiddleware::authenticate($request);
-                if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
-
-                $query = PostModel::query()->join('tbl_user','tbl_post.user_id','=','tbl_user.user_id')->join('tbl_category','tbl_post.category_id','=','tbl_category.category_id');
+                $query = PostModel::query()
+                    ->join('tbl_user','tbl_post.user_id','=','tbl_user.user_id')
+                    ->join('tbl_category','tbl_post.category_id','=','tbl_category.category_id')
+                    ->leftJoin('tbl_user as creator','tbl_post.created_by','=','creator.user_id')
+                    ->leftJoin('tbl_user as updater','tbl_post.updated_by','=','updater.user_id');
                 // Admin sees all
                 if ($auth['role_id'] == 1) {
                     // no extra where
@@ -125,7 +133,7 @@ class PostModelController extends Controller {
                 if (isset($data['search'])) { $query->where('tbl_post.title', 'LIKE', '%' . $data['search'] . '%'); }
                 if (isset($data['offset'])) { $query->skip($data['offset']); }
                 if (isset($data['limit'])) { $query->take($data['limit']); }
-                $posts = $query->select('tbl_post.*','tbl_user.username','tbl_category.category_name')->get();
+                $posts = $query->select('tbl_post.*','tbl_user.username','tbl_category.category_name','creator.username as created_by_name','updater.username as updated_by_name','creator.user_id as created_by_id','updater.user_id as updated_by_id')->get();
                 return response()->json(['status' => 200, 'count' => count($posts), 'data' => $posts], 200);
             } catch (\Exception $e) {
                 return response()->json(['status' => 400, 'error' => $e->getMessage()], 400);
@@ -142,14 +150,18 @@ class PostModelController extends Controller {
             if ($request->has('limit') && $request->filled('limit')) { $data["limit"] = $request->input("limit"); }
             if ($request->has('search') && $request->input('search') != "") { $data['search'] = $request->input('search'); }
             try {
-                $query = PostModel::query()->join('tbl_user','tbl_post.user_id','=','tbl_user.user_id')->join('tbl_category','tbl_post.category_id','=','tbl_category.category_id');
-                // Only show public posts with is_public = 1
+                $query = PostModel::query()
+                    ->join('tbl_user','tbl_post.user_id','=','tbl_user.user_id')
+                    ->join('tbl_category','tbl_post.category_id','=','tbl_category.category_id')
+                    ->leftJoin('tbl_user as creator','tbl_post.created_by','=','creator.user_id')
+                    ->leftJoin('tbl_user as updater','tbl_post.updated_by','=','updater.user_id');
+                // Only show public posts with is_public = 1 and active
                 $query->where('tbl_post.is_public', 1);
                 $query->where('tbl_post.post_status', 1);
                 if (isset($data['search'])) { $query->where('tbl_post.title', 'LIKE', '%' . $data['search'] . '%'); }
                 if (isset($data['offset'])) { $query->skip($data['offset']); }
                 if (isset($data['limit'])) { $query->take($data['limit']); }
-                $posts = $query->select('tbl_post.*','tbl_user.username','tbl_category.category_name')->get();
+                $posts = $query->select('tbl_post.*','tbl_user.username','tbl_category.category_name','creator.username as created_by_name','updater.username as updated_by_name','creator.user_id as created_by_id','updater.user_id as updated_by_id')->get();
                 return response()->json(['status' => 200, 'count' => count($posts), 'data' => $posts], 200);
             } catch (\Exception $e) {
                 return response()->json(['status' => 400, 'error' => $e->getMessage()], 400);
@@ -157,6 +169,13 @@ class PostModelController extends Controller {
         }
     }
     public function fetchSinglePost(Request $request) {
+        // Check authorization FIRST (before any input validation)
+        $auth = AuthMiddleware::authenticate($request);
+        if (!$auth) { 
+            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
+        }
+
+        // Then validate input parameters
         $valid = Validator::make($request->all(), [
             "post_id" => "required|exists:tbl_post,post_id"
         ]);
@@ -164,10 +183,14 @@ class PostModelController extends Controller {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
         } else {
             try {
-                $auth = AuthMiddleware::authenticate($request);
-                if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
 
-                $post = PostModel::where('post_id', $request->input('post_id'))->first();
+                $post = PostModel::query()
+                    ->leftJoin('tbl_user as author','tbl_post.user_id','=','author.user_id')
+                    ->leftJoin('tbl_user as creator','tbl_post.created_by','=','creator.user_id')
+                    ->leftJoin('tbl_user as updater','tbl_post.updated_by','=','updater.user_id')
+                    ->where('post_id', $request->input('post_id'))
+                    ->select('tbl_post.*','author.username as username','creator.username as created_by_name','updater.username as updated_by_name','creator.user_id as created_by_id','updater.user_id as updated_by_id')
+                    ->first();
                 if (!$post) {
                     return response()->json(['status' => 404, 'error' => 'Post not found.'], 404);
                 }
@@ -188,6 +211,13 @@ class PostModelController extends Controller {
         }
     }
     public function updatePost(Request $request) {
+        // Check authorization FIRST (before any input validation)
+        $auth = AuthMiddleware::authenticate($request);
+        if (!$auth) { 
+            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
+        }
+
+        // Then validate input parameters
         $valid = Validator::make($request->all(), [
             "post_id" => "required|exists:tbl_post,post_id",
             "user_id" => "sometimes|exists:tbl_user,user_id"
@@ -197,8 +227,6 @@ class PostModelController extends Controller {
         } else {
             $post = new PostModel();
             // Verify ownership or admin
-            $auth = AuthMiddleware::authenticate($request);
-            if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
             $existingPost = $post->where('post_id', $request->input('post_id'))->first();
             if (!$existingPost) { return response()->json(['status' => 404, 'error' => 'Post not found.'], 404); }
             // Contributors cannot update posts
@@ -255,6 +283,13 @@ class PostModelController extends Controller {
         }
     }
     public function deletePost(Request $request) {
+        // Check authorization FIRST (before any input validation)
+        $auth = AuthMiddleware::authenticate($request);
+        if (!$auth) { 
+            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
+        }
+
+        // Then validate input parameters
         $valid = Validator::make($request->all(), [
             "post_id" => "required"
         ]);
@@ -263,8 +298,6 @@ class PostModelController extends Controller {
         } else {
             $post = new PostModel();
             // Verify ownership or admin
-            $auth = AuthMiddleware::authenticate($request);
-            if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
             $existingPost = $post->where('post_id', $request->input('post_id'))->first();
             if (!$existingPost) { return response()->json(['status' => 404, 'error' => 'Post not found.'], 404); }
             // Contributors cannot delete posts

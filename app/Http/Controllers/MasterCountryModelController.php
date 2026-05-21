@@ -35,8 +35,13 @@ class MasterCountryModelController extends Controller {
         }
     }
     public function fetchAllCountries(Request $request) {
+        // Check authorization FIRST (before any input validation)
         $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        if (!$auth) { 
+            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
+        }
+
+        // Then validate input parameters
         $valid = Validator::make($request->all(), [
             'offset' => 'required|integer',
             'limit' => 'required|integer'

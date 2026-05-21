@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+use App\Models\UserModel as User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,12 +15,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Create a basic user in `tbl_user` for testing (no factory)
+        try {
+            User::create([
+                'username' => 'testuser',
+                'email' => 'test@example.com',
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'country_id' => 1,
+                'role_id' => 1,
+                'user_status' => 1
+            ]);
+        } catch (\Exception $e) {
+            // ignore if already exists
+        }
 
         // Call MasterDataSeeder to populate master data
         $this->call(MasterDataSeeder::class);

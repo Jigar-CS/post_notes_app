@@ -81,6 +81,13 @@ class NoteModelController extends Controller {
         }
     }
     public function fetchAllNotes(Request $request) {
+        // Check authorization FIRST (before any input validation)
+        $auth = AuthMiddleware::authenticate($request);
+        if (!$auth) { 
+            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
+        }
+
+        // Then validate input parameters
         $valid = Validator::make($request->all(), [
             'offset' => 'required|integer',
             'limit' => 'required|integer'
@@ -93,9 +100,6 @@ class NoteModelController extends Controller {
             $data["limit"] = $request->input("limit");
             if ($request->has('search') && $request->input('search') != "") { $data['search'] = $request->input('search'); }
             try {
-                $auth = AuthMiddleware::authenticate($request);
-                if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
-
                 $query = NoteModel::query()->join('tbl_category','tbl_note.category_id','=','tbl_category.category_id');
                 // If not admin, only show notes owned by the authenticated user
                 if ($auth['role_id'] != 1) {
@@ -113,6 +117,13 @@ class NoteModelController extends Controller {
         }
     }
     public function fetchSingleNote(Request $request) {
+        // Check authorization FIRST (before any input validation)
+        $auth = AuthMiddleware::authenticate($request);
+        if (!$auth) { 
+            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
+        }
+
+        // Then validate input parameters
         $valid = Validator::make($request->all(), [
             "note_id" => "required|exists:tbl_note,note_id"
         ]);
@@ -120,10 +131,13 @@ class NoteModelController extends Controller {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
         } else {
             try {
-                $auth = AuthMiddleware::authenticate($request);
-                if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
-
-                $note = NoteModel::where('note_id', $request->input('note_id'))->first();
+                $note = NoteModel::query()
+                    ->leftJoin('tbl_user as owner','tbl_note.user_id','=','owner.user_id')
+                    ->leftJoin('tbl_user as creator','tbl_note.created_by','=','creator.user_id')
+                    ->leftJoin('tbl_user as updater','tbl_note.updated_by','=','updater.user_id')
+                    ->where('note_id', $request->input('note_id'))
+                    ->select('tbl_note.*','owner.username as username','creator.username as created_by_name','updater.username as updated_by_name','creator.user_id as created_by_id','updater.user_id as updated_by_id')
+                    ->first();
                 if ($note && $auth['role_id'] != 1 && $note->user_id != $auth['user_id']) {
                     return response()->json(['status' => 403, 'error' => 'Unauthorized: cannot view this note.'], 403);
                 }
@@ -134,6 +148,13 @@ class NoteModelController extends Controller {
         }
     }
     public function updateNote(Request $request) {
+        // Check authorization FIRST (before any input validation)
+        $auth = AuthMiddleware::authenticate($request);
+        if (!$auth) { 
+            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
+        }
+
+        // Then validate input parameters
         $valid = Validator::make($request->all(), [
             "note_id" => "required|exists:tbl_note,note_id",
             "user_id" => "sometimes|exists:tbl_user,user_id"
@@ -143,8 +164,6 @@ class NoteModelController extends Controller {
         } else {
             $note = new NoteModel();
             // Verify ownership or admin
-            $auth = AuthMiddleware::authenticate($request);
-            if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
             $existingNote = $note->where('note_id', $request->input('note_id'))->first();
             if (!$existingNote || ($auth['role_id'] != 1 && $existingNote->user_id != $auth['user_id'])) {
                 return response()->json(['status' => 403, 'error' => 'Unauthorized: You can only edit your own notes.'], 403);
@@ -193,6 +212,13 @@ class NoteModelController extends Controller {
         }
     }
     public function deleteNote(Request $request) {
+        // Check authorization FIRST (before any input validation)
+        $auth = AuthMiddleware::authenticate($request);
+        if (!$auth) { 
+            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
+        }
+
+        // Then validate input parameters
         $valid = Validator::make($request->all(), [
             "note_id" => "required"
         ]);
@@ -201,8 +227,6 @@ class NoteModelController extends Controller {
         } else {
             $note = new NoteModel();
             // Verify ownership or admin
-            $auth = AuthMiddleware::authenticate($request);
-            if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
             $existingNote = $note->where('note_id', $request->input('note_id'))->first();
             if (!$existingNote || ($auth['role_id'] != 1 && $existingNote->user_id != $auth['user_id'])) {
                 return response()->json(['status' => 403, 'error' => 'Unauthorized: You can only delete your own notes.'], 403);

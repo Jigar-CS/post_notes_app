@@ -11,13 +11,12 @@ use App\Http\Controllers\PostTagModelController;
 use App\Http\Controllers\MasterCountryModelController;
 use App\Http\Controllers\MasterRoleModelController;
 
-// Public routes (no authentication required)
 Route::post('/post/fetch-public', [PostModelController::class, 'fetchPublicPosts']);
-
-// Authentication required routes - wrap these with middleware('auth:sanctum') in production
 Route::post('/user/get-dropdowns', [UserModelController::class, 'getRegistrationDropdowns']);
+
 Route::post('/user/create',        [UserModelController::class, 'registerUser']);
 Route::post('/user/login',         [UserModelController::class, 'loginUser']);
+
 Route::post('/user/logout',        [UserModelController::class, 'logoutUser']);
 Route::post('/user/fetch-all',     [UserModelController::class, 'fetchAllUsers']);
 Route::post('/user/fetch-single',  [UserModelController::class, 'fetchSingleUser']);
@@ -56,6 +55,7 @@ Route::post('/country/fetch-all',    [MasterCountryModelController::class, 'fetc
 Route::post('/country/fetch-single', [MasterCountryModelController::class, 'fetchSingleCountry']);
 Route::post('/country/update',       [MasterCountryModelController::class, 'updateCountry']);
 Route::post('/country/delete',       [MasterCountryModelController::class, 'deleteCountry']);
+
 Route::post('/role/create',       [MasterRoleModelController::class, 'createRole']);
 Route::post('/role/fetch-all',    [MasterRoleModelController::class, 'fetchAllRoles']);
 Route::post('/role/fetch-single', [MasterRoleModelController::class, 'fetchSingleRole']);
