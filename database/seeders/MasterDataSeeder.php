@@ -29,5 +29,17 @@ class MasterDataSeeder extends Seeder
         'post_status' => 1
     ]
     ]);
+
+
+     DB::table('tbl_note')->insert([
+    [
+        'user_id' => 1,
+        'created_by' => 1,
+        'category_id' => 1,
+        'title' => 'My First Blog Post',
+        'content' => 'This is the content body of the first seeded post.',
+        'note_status' => 1
+    ]
+    ]);
     }
 }
