@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 use App\Models\PostModel as Post;
 use App\Models\UserModel as User;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -18,17 +19,13 @@ class DatabaseSeeder extends Seeder
         // Create a basic user in `tbl_user` for testing (no factory)
         try {
             User::create([
-                'username' => 'testuser',
+                'username' => 'abc',
                 'email' => 'test@example.com',
-                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'password' => Hash::make('1234'),
                 'country_id' => 1,
                 'role_id' => 1,
                 'user_status' => 1
             ]);
-
-           
-
-
         } catch (\Exception $e) {
             // ignore if already exists
         }

@@ -56,27 +56,41 @@ class UserModelController extends Controller {
         ]);
         if ($valid->fails()) {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
-        } else {
-            try {
-                $user = UserModel::where('email', $request->input('email'))->first();
-                if ($user && Hash::check($request->input('password'), $user->password)) {
-                    // Generate Sanctum API token for authentication
-                    $token = $user->createToken('api_token')->plainTextToken;
-                    
-                    // return sanitized user (no password) and token
-                    $safe = [
-                        'user_id' => $user->user_id,
-                        'username' => $user->username,
-                        'email' => $user->email,
-                        'role_id' => $user->role_id,
-                        'is_primary_user' => AuthMiddleware::isPrimaryUser(['user_id' => $user->user_id])
-                    ];
-                    return response()->json(['status' => 200, 'data' => $safe, 'token' => $token], 200);
+        }
+
+        try {
+            $adminAuth = AuthMiddleware::authenticate($request); // may be null if no token sent
+            $user = UserModel::where('email', $request->input('email'))->first();
+
+            // If a token was sent, ensure it belongs to primary user
+            if ($adminAuth) {
+                if (empty($adminAuth['is_primary_user'])) {
+                    return response()->json(['status' => 401, 'error' => 'Authorization required: primary user token.'], 401);
                 }
-                return response()->json(['status' => 400, 'error' => 'Invalid credentials.'], 400);
-            } catch (\Exception $e) {
-                return response()->json(['status' => 400, 'error' => $e->getMessage()], 400);
+            } else {
+                // No token provided: only allow login if the credentials belong to the primary user
+                if (!$user || !AuthMiddleware::isPrimaryUser(['user_id' => $user->user_id])) {
+                    return response()->json(['status' => 401, 'error' => 'Authorization required: primary user token or primary user credentials.'], 401);
+                }
             }
+
+            if ($user && Hash::check($request->input('password'), $user->password)) {
+                // Generate Sanctum API token for authentication
+                $token = $user->createToken('api_token')->plainTextToken;
+
+                // return sanitized user (no password) and token
+                $safe = [
+                    'user_id' => $user->user_id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'role_id' => $user->role_id,
+                    'is_primary_user' => AuthMiddleware::isPrimaryUser(['user_id' => $user->user_id])
+                ];
+                return response()->json(['status' => 200, 'data' => $safe, 'token' => $token], 200);
+            }
+            return response()->json(['status' => 400, 'error' => 'Invalid credentials.'], 400);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 400, 'error' => $e->getMessage()], 400);
         }
     }
     public function fetchAllUsers(Request $request) {

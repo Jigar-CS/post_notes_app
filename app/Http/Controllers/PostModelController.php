@@ -186,6 +186,10 @@ class PostModelController extends Controller {
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
             "post_id" => "required|exists:tbl_post,post_id",
+            "title" => "required",
+            "content" => "required",
+            "category_name" => "required|string",
+            "is_public" => "required|integer|in:0,1",
             "user_id" => "sometimes|exists:tbl_user,user_id"
         ]);
         if ($valid->fails()) {
