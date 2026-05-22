@@ -1,7 +1,7 @@
 <?php
 
 namespace Database\Seeders;
-
+use App\Models\PostModel as Post;
 use App\Models\UserModel as User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -25,6 +25,10 @@ class DatabaseSeeder extends Seeder
                 'role_id' => 1,
                 'user_status' => 1
             ]);
+
+           
+
+
         } catch (\Exception $e) {
             // ignore if already exists
         }

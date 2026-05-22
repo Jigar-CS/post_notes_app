@@ -14,8 +14,8 @@ class TagModelController extends Controller {
         if ($valid->fails()) {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
         } else {
-            // Only admins can create tags
-            if ($auth['role_id'] != 1) { return response()->json(['status' => 403, 'error' => 'Forbidden: only administrators can create tags.'], 403); }
+            // Only the first existing user can create tags
+            if (empty($auth['is_primary_user'])) { return response()->json(['status' => 403, 'error' => 'Forbidden: primary user only.'], 403); }
             
             $tag = new TagModel();
             $tag->tag_name = $request->input('tag_name');
@@ -89,8 +89,8 @@ class TagModelController extends Controller {
         if ($valid->fails()) {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
         } else {
-            // Only admins can update tags
-            if ($auth['role_id'] != 1) { return response()->json(['status' => 403, 'error' => 'Forbidden: only administrators can update tags.'], 403); }
+            // Only the first existing user can update tags
+            if (empty($auth['is_primary_user'])) { return response()->json(['status' => 403, 'error' => 'Forbidden: primary user only.'], 403); }
             $tag = new TagModel();
             $newrequest = $request->except(['tag_id']);
             try {
@@ -114,8 +114,8 @@ class TagModelController extends Controller {
         if ($valid->fails()) {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
         } else {
-            // Only admins can delete tags
-            if ($auth['role_id'] != 1) { return response()->json(['status' => 403, 'error' => 'Forbidden: only administrators can delete tags.'], 403); }
+            // Only the first existing user can delete tags
+            if (empty($auth['is_primary_user'])) { return response()->json(['status' => 403, 'error' => 'Forbidden: primary user only.'], 403); }
             $tag = new TagModel();
             $request->request->add(['tag_status' => 0]);
             $newrequest = $request->except(['tag_id']);

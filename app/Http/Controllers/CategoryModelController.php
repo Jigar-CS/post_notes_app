@@ -8,15 +8,19 @@ use App\Http\Controllers\AuthMiddleware;
 class CategoryModelController extends Controller {
     public function createCategory(Request $request) {
         $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        if (!$auth) { return response()->json([
+                'status' => 401, 
+                'error' => 'Authorization required.'
+            ], 401); }
+            
         $valid = Validator::make($request->all(), [
             "category_name" => "required"
         ]);
         if ($valid->fails()) {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
         } else {
-            // Only admins can create categories
-            if ($auth['role_id'] != 1) { return response()->json(['status' => 403, 'error' => 'Forbidden: only administrators can create categories.'], 403); }
+            // Only the first existing user can create categories
+            if (empty($auth['is_primary_user'])) { return response()->json(['status' => 403, 'error' => 'Forbidden: primary user only.'], 403); }
             
             $category = new CategoryModel();
             $category->category_name = $request->input('category_name');
@@ -91,8 +95,8 @@ class CategoryModelController extends Controller {
         if ($valid->fails()) {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
         } else {
-            // Only admins can update categories
-            if ($auth['role_id'] != 1) { return response()->json(['status' => 403, 'error' => 'Forbidden: only administrators can update categories.'], 403); }
+            // Only the first existing user can update categories
+            if (empty($auth['is_primary_user'])) { return response()->json(['status' => 403, 'error' => 'Forbidden: primary user only.'], 403); }
             $category = new CategoryModel();
             $newrequest = $request->except(['category_id']);
             if($request->has('category_name')) {
@@ -119,8 +123,8 @@ class CategoryModelController extends Controller {
         if ($valid->fails()) {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
         } else {
-            // Only admins can delete categories
-            if ($auth['role_id'] != 1) { return response()->json(['status' => 403, 'error' => 'Forbidden: only administrators can delete categories.'], 403); }
+            // Only the first existing user can delete categories
+            if (empty($auth['is_primary_user'])) { return response()->json(['status' => 403, 'error' => 'Forbidden: primary user only.'], 403); }
             $category = new CategoryModel();
             $request->request->add(['category_status' => 0]);
             $newrequest = $request->except(['category_id']);

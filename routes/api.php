@@ -9,7 +9,6 @@ use App\Http\Controllers\NoteModelController;
 use App\Http\Controllers\TagModelController;
 use App\Http\Controllers\PostTagModelController;
 use App\Http\Controllers\MasterCountryModelController;
-use App\Http\Controllers\MasterRoleModelController;
 
 Route::post('/post/fetch-public', [PostModelController::class, 'fetchPublicPosts']);
 Route::post('/user/get-dropdowns', [UserModelController::class, 'getRegistrationDropdowns']);
@@ -55,9 +54,3 @@ Route::post('/country/fetch-all',    [MasterCountryModelController::class, 'fetc
 Route::post('/country/fetch-single', [MasterCountryModelController::class, 'fetchSingleCountry']);
 Route::post('/country/update',       [MasterCountryModelController::class, 'updateCountry']);
 Route::post('/country/delete',       [MasterCountryModelController::class, 'deleteCountry']);
-
-Route::post('/role/create',       [MasterRoleModelController::class, 'createRole']);
-Route::post('/role/fetch-all',    [MasterRoleModelController::class, 'fetchAllRoles']);
-Route::post('/role/fetch-single', [MasterRoleModelController::class, 'fetchSingleRole']);
-Route::post('/role/update',       [MasterRoleModelController::class, 'updateRole']);
-Route::post('/role/delete',       [MasterRoleModelController::class, 'deleteRole']);

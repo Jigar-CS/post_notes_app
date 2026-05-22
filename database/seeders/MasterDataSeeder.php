@@ -18,11 +18,16 @@ class MasterDataSeeder extends Seeder
 
         // 2. (age master removed) - previously inserted age brackets here
 
-        // 3. Insert System Roles
-        DB::table('tbl_master_role')->insert([
-            ['role_name' => 'Administrator', 'role_status' => 1],
-            ['role_name' => 'Author', 'role_status' => 1],
-            ['role_name' => 'Contributor', 'role_status' => 1],
-        ]);
+        DB::table('tbl_post')->insert([
+    [
+        'user_id' => 1,
+        'created_by' => 1,
+        'category_id' => 1,
+        'title' => 'My First Blog Post',
+        'content' => 'This is the content body of the first seeded post.',
+        'is_public' => 1,
+        'post_status' => 1
+    ]
+    ]);
     }
 }

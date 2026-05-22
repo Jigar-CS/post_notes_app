@@ -26,6 +26,10 @@ class NoteModelController extends Controller {
         }
         
         try {
+            if (!$auth) {
+                return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401);
+            }
+
             // Get or create category by name (with slug)
             $categoryName = $request->input('category_name');
             $categorySlug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $categoryName), '-'));
@@ -50,9 +54,9 @@ class NoteModelController extends Controller {
             }
             
             $note = new NoteModel();
-            // Determine user for the note: admin may set `user_id`, others use their own id
+            // Determine user for the note: primary user may set `user_id`, others use their own id
             $userId = $auth['user_id'];
-            if ($auth['role_id'] == 1 && $request->has('user_id')) {
+            if (!empty($auth['is_primary_user']) && $request->has('user_id')) {
                 $userId = $request->input('user_id');
             }
             $note->user_id = $userId;
@@ -81,11 +85,7 @@ class NoteModelController extends Controller {
         }
     }
     public function fetchAllNotes(Request $request) {
-        // Check authorization FIRST (before any input validation)
         $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -100,10 +100,9 @@ class NoteModelController extends Controller {
             $data["limit"] = $request->input("limit");
             if ($request->has('search') && $request->input('search') != "") { $data['search'] = $request->input('search'); }
             try {
-                $query = NoteModel::query()->join('tbl_category','tbl_note.category_id','=','tbl_category.category_id');
-                // If not admin, only show notes owned by the authenticated user
-                if ($auth['role_id'] != 1) {
-                    $query->where('tbl_note.user_id', $auth['user_id']);
+                $query = NoteModel::query()->withJoins();
+                if (empty($auth) || empty($auth['is_primary_user'])) {
+                    $query->where('tbl_note.note_status', 1);
                 }
                 
                 if (isset($data['search'])) { $query->where('tbl_note.title', 'LIKE', '%' . $data['search'] . '%'); }
@@ -117,11 +116,7 @@ class NoteModelController extends Controller {
         }
     }
     public function fetchSingleNote(Request $request) {
-        // Check authorization FIRST (before any input validation)
         $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -131,14 +126,14 @@ class NoteModelController extends Controller {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
         } else {
             try {
-                $note = NoteModel::query()
-                    ->leftJoin('tbl_user as owner','tbl_note.user_id','=','owner.user_id')
-                    ->leftJoin('tbl_user as creator','tbl_note.created_by','=','creator.user_id')
-                    ->leftJoin('tbl_user as updater','tbl_note.updated_by','=','updater.user_id')
-                    ->where('note_id', $request->input('note_id'))
-                    ->select('tbl_note.*','owner.username as username','creator.username as created_by_name','updater.username as updated_by_name','creator.user_id as created_by_id','updater.user_id as updated_by_id')
-                    ->first();
-                if ($note && $auth['role_id'] != 1 && $note->user_id != $auth['user_id']) {
+                $note = NoteModel::query()->withJoins()->where('note_id', $request->input('note_id'))->first();
+                if (!empty($auth) && !empty($auth['is_primary_user'])) {
+                    // primary user can view any note
+                } elseif ($note && $note->note_status == 1) {
+                    // public note ok for all
+                } elseif ($note && !empty($auth) && $note->user_id == $auth['user_id']) {
+                    // owner ok
+                } elseif ($note) {
                     return response()->json(['status' => 403, 'error' => 'Unauthorized: cannot view this note.'], 403);
                 }
                 return response()->json(['status' => 200, 'data' => $note], 200);
@@ -165,7 +160,7 @@ class NoteModelController extends Controller {
             $note = new NoteModel();
             // Verify ownership or admin
             $existingNote = $note->where('note_id', $request->input('note_id'))->first();
-            if (!$existingNote || ($auth['role_id'] != 1 && $existingNote->user_id != $auth['user_id'])) {
+            if (!$existingNote || (empty($auth['is_primary_user']) && $existingNote->user_id != $auth['user_id'])) {
                 return response()->json(['status' => 403, 'error' => 'Unauthorized: You can only edit your own notes.'], 403);
             }
             
@@ -228,7 +223,7 @@ class NoteModelController extends Controller {
             $note = new NoteModel();
             // Verify ownership or admin
             $existingNote = $note->where('note_id', $request->input('note_id'))->first();
-            if (!$existingNote || ($auth['role_id'] != 1 && $existingNote->user_id != $auth['user_id'])) {
+            if (!$existingNote || (empty($auth['is_primary_user']) && $existingNote->user_id != $auth['user_id'])) {
                 return response()->json(['status' => 403, 'error' => 'Unauthorized: You can only delete your own notes.'], 403);
             }
             $request->request->add(['note_status' => 0, 'updated_by' => $auth['user_id']]);

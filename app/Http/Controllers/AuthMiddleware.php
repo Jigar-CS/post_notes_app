@@ -6,6 +6,23 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthMiddleware {
     
+    public static function getPrimaryUserId() {
+        try {
+            return UserModel::orderBy('user_id')->value('user_id');
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    public static function isPrimaryUser($user) {
+        if (!$user || !isset($user['user_id'])) {
+            return false;
+        }
+
+        $primaryUserId = self::getPrimaryUserId();
+        return $primaryUserId !== null && (int) $user['user_id'] === (int) $primaryUserId;
+    }
+    
    public static function authenticate(Request $request) {
         // Check Authorization header with Bearer token (Sanctum)
         $header = $request->header('Authorization');
@@ -22,7 +39,7 @@ class AuthMiddleware {
                             'user_id' => $user->user_id,
                             'username' => $user->username,
                             'email' => $user->email,
-                            'role_id' => $user->role_id
+                            'is_primary_user' => self::isPrimaryUser(['user_id' => $user->user_id])
                         ];
                     }
                 }
@@ -44,40 +61,6 @@ class AuthMiddleware {
         return $user;
     }
 
-    /**
-     * Require specific role - returns error response if user doesn't have the required role
-     * 
-     * @param Request $request
-     * @param array $allowedRoles - Array of role IDs that are allowed (e.g., [1] for admin only)
-     * @return array|null - Returns user array if authorized, null otherwise (caller should return 403)
-     */
-    public static function requireRole(Request $request, array $allowedRoles) {
-        $user = self::authenticate($request);
-        if (!$user) {
-            return null; // Not authenticated
-        }
-        if (!in_array($user['role_id'], $allowedRoles)) {
-            return null; // Authenticated but insufficient role
-        }
-        return $user;
-    }
-
-   
-    public static function isAdmin($user) {
-        return $user && isset($user['role_id']) && $user['role_id'] == 1;
-    }
-
-    
-    public static function isAuthor($user) {
-        return $user && isset($user['role_id']) && ($user['role_id'] == 1 || $user['role_id'] == 2);
-    }
-
-   
-    public static function isContributor($user) {
-        return $user && isset($user['role_id']) && $user['role_id'] == 3;
-    }
-
-   
     public static function ownsResource($user, $resourceOwnerId) {
         return $user && isset($user['user_id']) && $user['user_id'] == $resourceOwnerId;
     }

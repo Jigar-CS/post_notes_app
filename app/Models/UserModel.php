@@ -11,8 +11,8 @@ class UserModel extends Authenticatable
 
     protected $table = 'tbl_user';
     protected $primaryKey = 'user_id';
-    public $timestamps = false; // We aren't using default created_at/updated_at columns here
-
+    public $timestamps = false;
+    
     protected $fillable = [
         'username',
         'email',
@@ -26,4 +26,10 @@ class UserModel extends Authenticatable
     protected $hidden = [
         'password'
     ];
+
+    public function scopeWithCountry($query)
+    {
+        return $query->leftJoin('tbl_master_country', 'tbl_user.country_id', '=', 'tbl_master_country.country_id')
+            ->select('tbl_user.user_id', 'tbl_user.username', 'tbl_user.email', 'tbl_user.country_id', 'tbl_user.role_id', 'tbl_user.user_status', 'tbl_master_country.country_name');
+    }
 }

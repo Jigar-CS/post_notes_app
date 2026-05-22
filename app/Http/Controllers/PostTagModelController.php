@@ -14,8 +14,8 @@ class PostTagModelController extends Controller {
         if ($valid->fails()) {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
         } else {
-            // Only admins and authors can attach tags to posts/notes
-            if ($auth['role_id'] == 3) { return response()->json(['status' => 403, 'error' => 'Forbidden: Contributors cannot attach tags.'], 403); }
+            // Only the first existing user can manage shared tag associations
+            if (empty($auth['is_primary_user'])) { return response()->json(['status' => 403, 'error' => 'Forbidden: primary user only.'], 403); }
             $pt = new PostTagModel();
             $pt->post_id = $request->input('post_id');
             $pt->note_id = $request->input('note_id');
@@ -41,8 +41,8 @@ class PostTagModelController extends Controller {
         if ($valid->fails()) {
             return response()->json(['status' => 400, 'error' => $valid->errors()], 400);
         } else {
-            // Only admins and authors can detach tags
-            if ($auth['role_id'] == 3) { return response()->json(['status' => 403, 'error' => 'Forbidden: Contributors cannot detach tags.'], 403); }
+            // Only the first existing user can manage shared tag associations
+            if (empty($auth['is_primary_user'])) { return response()->json(['status' => 403, 'error' => 'Forbidden: primary user only.'], 403); }
             try {
                 $result = PostTagModel::where('post_tag_id', $request->input('post_tag_id'))->delete();
                 if ($result) {
