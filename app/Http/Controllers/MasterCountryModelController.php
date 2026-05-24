@@ -3,11 +3,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Validator;
 use App\Models\MasterCountryModel;
-use App\Http\Controllers\AuthMiddleware;
 class MasterCountryModelController extends Controller {
     public function createCountry(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "country_name" => "required"
         ]);
@@ -33,11 +31,7 @@ class MasterCountryModelController extends Controller {
         }
     }
     public function fetchAllCountries(Request $request) {
-        // Check authorization FIRST (before any input validation)
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -64,8 +58,7 @@ class MasterCountryModelController extends Controller {
         }
     }
     public function fetchSingleCountry(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "country_id" => "required"
         ]);
@@ -81,8 +74,7 @@ class MasterCountryModelController extends Controller {
         }
     }
     public function updateCountry(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "country_id" => "required"
         ]);
@@ -107,8 +99,7 @@ class MasterCountryModelController extends Controller {
         }
     }
     public function deleteCountry(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "country_id" => "required"
         ]);

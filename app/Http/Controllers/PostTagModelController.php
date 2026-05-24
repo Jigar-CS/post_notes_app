@@ -3,11 +3,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Validator;
 use App\Models\PostTagModel;
-use App\Http\Controllers\AuthMiddleware;
 class PostTagModelController extends Controller {
     public function attachTag(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "tag_id" => "required"
         ]);
@@ -33,8 +31,7 @@ class PostTagModelController extends Controller {
         }
     }
     public function detachTag(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "post_tag_id" => "required"
         ]);

@@ -4,14 +4,9 @@ use Illuminate\Http\Request;
 use Validator;
 use App\Models\CategoryModel;
 use Illuminate\Support\Str;
-use App\Http\Controllers\AuthMiddleware;
 class CategoryModelController extends Controller {
     public function createCategory(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json([
-                'status' => 401, 
-                'error' => 'Authorization required.'
-            ], 401); }
+        $auth = $request->attributes->get('auth_user');
             
         $valid = Validator::make($request->all(), [
             "category_name" => "required"
@@ -39,11 +34,7 @@ class CategoryModelController extends Controller {
         }
     }
     public function fetchAllCategories(Request $request) {
-        // Check authorization FIRST (before any input validation)
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -70,8 +61,7 @@ class CategoryModelController extends Controller {
         }
     }
     public function fetchSingleCategory(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "category_id" => "required"
         ]);
@@ -87,8 +77,7 @@ class CategoryModelController extends Controller {
         }
     }
     public function updateCategory(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "category_id" => "required"
         ]);
@@ -115,8 +104,7 @@ class CategoryModelController extends Controller {
         }
     }
     public function deleteCategory(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "category_id" => "required"
         ]);

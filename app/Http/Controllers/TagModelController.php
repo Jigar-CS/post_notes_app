@@ -3,11 +3,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Validator;
 use App\Models\TagModel;
-use App\Http\Controllers\AuthMiddleware;
 class TagModelController extends Controller {
     public function createTag(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "tag_name" => "required"
         ]);
@@ -33,11 +31,7 @@ class TagModelController extends Controller {
         }
     }
     public function fetchAllTags(Request $request) {
-        // Check authorization FIRST (before any input validation)
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -64,8 +58,7 @@ class TagModelController extends Controller {
         }
     }
     public function fetchSingleTag(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "tag_id" => "required"
         ]);
@@ -81,8 +74,7 @@ class TagModelController extends Controller {
         }
     }
     public function updateTag(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "tag_id" => "required"
         ]);
@@ -106,8 +98,7 @@ class TagModelController extends Controller {
         }
     }
     public function deleteTag(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         $valid = Validator::make($request->all(), [
             "tag_id" => "required"
         ]);

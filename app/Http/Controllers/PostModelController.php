@@ -6,11 +6,9 @@ use App\Models\PostModel;
 use App\Models\PostTagModel;
 use App\Models\CategoryModel;
 use App\Models\TagModel;
-use App\Http\Controllers\AuthMiddleware;
 class PostModelController extends Controller {
     public function createPost(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         
         // Validation: accept category_name and tag names only
         $valid = Validator::make($request->all(), [
@@ -88,7 +86,7 @@ class PostModelController extends Controller {
         }
     }
     public function fetchAllPosts(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -146,7 +144,7 @@ class PostModelController extends Controller {
         }
     }
     public function fetchSinglePost(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -177,19 +175,11 @@ class PostModelController extends Controller {
         }
     }
     public function updatePost(Request $request) {
-        // Check authorization FIRST (before any input validation)
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
             "post_id" => "required|exists:tbl_post,post_id",
-            "title" => "required",
-            "content" => "required",
-            "category_name" => "required|string",
-            "is_public" => "required|integer|in:0,1",
             "user_id" => "sometimes|exists:tbl_user,user_id"
         ]);
         if ($valid->fails()) {
@@ -251,11 +241,7 @@ class PostModelController extends Controller {
         }
     }
     public function deletePost(Request $request) {
-        // Check authorization FIRST (before any input validation)
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [

@@ -5,7 +5,6 @@ use Validator;
 use App\Models\UserModel;
 use App\Models\MasterCountryModel;
 use Illuminate\Support\Facades\Hash;
-use App\Http\Controllers\AuthMiddleware;
 class UserModelController extends Controller {
     public function getRegistrationDropdowns(Request $request) {
         try {
@@ -16,12 +15,6 @@ class UserModelController extends Controller {
         }
     }
     public function registerUser(Request $request) {
-         $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json([
-                'status' => 401, 
-                'error' => 'Authorization required.'
-            ], 401); }
-
         $valid = Validator::make($request->all(), [
             "username" => "required",
             "email" => "required|email",
@@ -59,8 +52,9 @@ class UserModelController extends Controller {
         }
 
         try {
-            $adminAuth = AuthMiddleware::authenticate($request); // may be null if no token sent
+            $adminAuth = $request->attributes->get('auth_user'); // may be null if no token sent
             $user = UserModel::where('email', $request->input('email'))->first();
+            $primaryUserId = UserModel::orderBy('user_id')->value('user_id');
 
             // If a token was sent, ensure it belongs to primary user
             if ($adminAuth) {
@@ -69,7 +63,7 @@ class UserModelController extends Controller {
                 }
             } else {
                 // No token provided: only allow login if the credentials belong to the primary user
-                if (!$user || !AuthMiddleware::isPrimaryUser(['user_id' => $user->user_id])) {
+                if (!$user || (int) $user->user_id !== (int) $primaryUserId) {
                     return response()->json(['status' => 401, 'error' => 'Authorization required: primary user token or primary user credentials.'], 401);
                 }
             }
@@ -84,7 +78,7 @@ class UserModelController extends Controller {
                     'username' => $user->username,
                     'email' => $user->email,
                     'role_id' => $user->role_id,
-                    'is_primary_user' => AuthMiddleware::isPrimaryUser(['user_id' => $user->user_id])
+                    'is_primary_user' => ((int) $user->user_id === (int) $primaryUserId)
                 ];
                 return response()->json(['status' => 200, 'data' => $safe, 'token' => $token], 200);
             }
@@ -94,11 +88,7 @@ class UserModelController extends Controller {
         }
     }
     public function fetchAllUsers(Request $request) {
-        // Check authorization FIRST (before any input validation)
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
         // Only the first existing user can fetch all users
         if (empty($auth['is_primary_user'])) { 
             return response()->json(['status' => 403, 'error' => 'Forbidden: primary user only.'], 403); 
@@ -134,11 +124,7 @@ class UserModelController extends Controller {
         }
     }
     public function fetchSingleUser(Request $request) {
-        // Check authorization FIRST (before any input validation)
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -161,11 +147,7 @@ class UserModelController extends Controller {
         }
     }
     public function updateUser(Request $request) {
-        // Check authorization FIRST (before any input validation)
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -192,11 +174,7 @@ class UserModelController extends Controller {
         }
     }
     public function deleteUser(Request $request) {
-        // Check authorization FIRST (before any input validation)
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -226,11 +204,7 @@ class UserModelController extends Controller {
     }
 
     public function logoutUser(Request $request) {
-        // User must be authenticated to logout
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required. You must be logged in to logout.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
 
         // Revoke all Sanctum tokens for this user
         try {

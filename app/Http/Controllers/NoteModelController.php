@@ -6,11 +6,9 @@ use App\Models\NoteModel;
 use App\Models\PostTagModel;
 use App\Models\CategoryModel;
 use App\Models\TagModel;
-use App\Http\Controllers\AuthMiddleware;
 class NoteModelController extends Controller {
     public function createNote(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); }
+        $auth = $request->attributes->get('auth_user');
         
         // Validation: accept category_name and tag names only
         $valid = Validator::make($request->all(), [
@@ -26,10 +24,6 @@ class NoteModelController extends Controller {
         }
         
         try {
-            if (!$auth) {
-                return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401);
-            }
-
             // Get or create category by name (with slug)
             $categoryName = $request->input('category_name');
             $categorySlug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $categoryName), '-'));
@@ -85,7 +79,7 @@ class NoteModelController extends Controller {
         }
     }
     public function fetchAllNotes(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -116,7 +110,7 @@ class NoteModelController extends Controller {
         }
     }
     public function fetchSingleNote(Request $request) {
-        $auth = AuthMiddleware::authenticate($request);
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -143,11 +137,7 @@ class NoteModelController extends Controller {
         }
     }
     public function updateNote(Request $request) {
-        // Check authorization FIRST (before any input validation)
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
@@ -207,11 +197,7 @@ class NoteModelController extends Controller {
         }
     }
     public function deleteNote(Request $request) {
-        // Check authorization FIRST (before any input validation)
-        $auth = AuthMiddleware::authenticate($request);
-        if (!$auth) { 
-            return response()->json(['status' => 401, 'error' => 'Authorization required.'], 401); 
-        }
+        $auth = $request->attributes->get('auth_user');
 
         // Then validate input parameters
         $valid = Validator::make($request->all(), [
